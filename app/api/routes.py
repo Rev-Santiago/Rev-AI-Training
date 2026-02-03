@@ -1,33 +1,42 @@
 from fastapi import APIRouter
-from app.core.ai_engine import get_guro_response
+from app.core.ai_engine import get_guro_response, get_guro_response_stream
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
+# 1. Initialize a global list to store the conversation
+# For a TV system, we'll keep this lightweight
+chat_history = [] 
+
 @router.get("/ask")
 async def ask_guro(query: str):
-    raw_answer = await get_guro_response(query)
+    # 2. Pass BOTH query and chat_history to fix the TypeError
+    raw_answer = await get_guro_response(query, chat_history)
     
-    # 2. LIST COMPREHENSION: Clean and filter the output
-    # This removes markdown characters and keeps only titled words
-    keywords = [
-        word.strip("*").strip(":") 
-        for word in raw_answer.split() 
-        if word.strip("*").strip(":").istitle() and word.strip("*").strip(":").isalpha()
-    ]
+    # 3. Update the history so Guro remembers the next question
+    chat_history.append(("human", query))
+    chat_history.append(("ai", raw_answer))
     
-    # 3. STRUCTURED DATA: Organize the response into a Dictionary
-    structured_data = {
+    # 4. Sliding Window: Keep only the last 3 exchanges (6 items)
+    # This protects the TV's limited RAM from filling up
+    if len(chat_history) > 6:
+        del chat_history[:2] 
+
+    return {
         "status": "success",
         "metadata": {
             "model": "gemma3:4b",
-            "assistant": "Guro",
-            "keyword_count": len(keywords)
+            "assistant": "Guro"
         },
         "content": {
-            "answer": raw_answer,
-            "extracted_keywords": keywords
+            "answer": raw_answer
         }
     }
-    
-    # 4. Return the dictionary (FastAPI automatically converts this to JSON)
-    return structured_data
+
+@router.get("/ask/stream")
+async def ask_guro_streaming(query: str):
+    # We return a stream instead of a standard dictionary
+    return StreamingResponse(
+        get_guro_response_stream(query, chat_history), 
+        media_type="text/plain"
+    )
