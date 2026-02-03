@@ -27,26 +27,30 @@ The project follows a modular pattern to ensure scalability:
 
 ### 1. Model Setup
 Ensure Ollama is installed and the model is pulled:
-```bash
+bash
+```
 ollama pull gemma3:4b
 ```
 
 ## Environment Configuration
 - **Create a .env file in the root directory:**
-```Code Snippet
+Code Snippet
+```
 MODEL_NAME=gemma3:4b
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
 ## Install Dependencies
-```Bash
+Bash
+```
 python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ## Run the Server
-```Bash
+Bash
+```
 uvicorn app.main:app --reload
 ```
 
@@ -59,7 +63,8 @@ http://127.0.0.1:8000/ask?query={query}
 - **Streaming Request (Real-time)**
 - To see the text generation in real-time within your terminal:
 
-```Bash
+Bash
+```
 curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+to+a+kid](http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+to+a+kid)"
 ```
 
@@ -67,7 +72,8 @@ curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+
 - To make the output readable in Postman, go to Scripts > Post-response and paste the relevant template:
 
 - **For /ask (JSON):**
-```JavaScript
+JavaScript
+```
     var template = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; line-height: 1.8; max-width: 900px; color: #333; background: #f9f9f9; border-radius: 10px;">
             <h1 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">{{metadata.assistant}} Response</h1>
@@ -79,7 +85,8 @@ curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+
     pm.visualizer.set(template, pm.response.json());
 ```
 - **For /ask/stream (Text Stream):**
-```JavaScript
+JavaScript
+```
     var template = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; line-height: 1.8; max-width: 900px; color: #333; background: #f9f9f9; border-radius: 10px;">
             <h1 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">Guro Streaming Feed</h1>
@@ -97,8 +104,9 @@ curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+
 
 - 1. Build the Image
 - Navigate to the root directory and run:
-```
+
 Bash
+```
 docker build -t guro-backend:v1 .
 ```
 
@@ -106,22 +114,25 @@ docker build -t guro-backend:v1 .
 - **Because the AI engine runs inside a container, it needs a "bridge" to reach the Ollama service on your Windows host.**
 
 - Update .env: Set OLLAMA_BASE_URL to use the Docker internal gateway:
-```
+
 Code snippet
+```
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 ```
 - **Enable Network Access: You must tell Ollama to accept external calls. In a fresh PowerShell window, run:**
 
-```
+
 PowerShell
+```
 $env:OLLAMA_HOST="0.0.0.0"
 ollama serve
 ```
 
 ## 3. Run the Container
 - **Use the --add-host flag to map the host gateway and --env-file to pass your configuration:**
-```
+
 Bash
+```
 docker run -d -p 8000:8000 --env-file .env --add-host=host.docker.internal:host-gateway --name guro-app guro-backend:v1
 ```
 ## 🔍 Troubleshooting Docker on Windows
