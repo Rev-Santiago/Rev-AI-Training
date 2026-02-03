@@ -32,7 +32,7 @@ The project follows a modular pattern to ensure scalability:
 ## How to Run the server
     uvicorn app.main:app --reload
 
-## How to Promp using GET(PostMan)
+## How to prompt using GET(PostMan)
     http://127.0.0.1:8000/ask?query={query here}?
     ex. http://127.0.0.1:8000/ask?query=What is a list comprehension?
 
