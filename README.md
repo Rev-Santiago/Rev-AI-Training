@@ -131,6 +131,13 @@ ollama serve
 ## 3. Run the Container
 - **Use the --add-host flag to map the host gateway and --env-file to pass your configuration:**
 
+## 4. Lastly for an example run with a prompt ready
+Powershell
+```
+curl.exe -N "http://localhost:8000/ask/stream?query=Learn+about+software+development+agile&grade=Grade+7" 
+                                                
+```
+
 Bash
 ```
 docker run -d -p 8000:8000 --env-file .env --add-host=host.docker.internal:host-gateway --name guro-app guro-backend:v1
