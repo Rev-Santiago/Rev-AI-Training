@@ -29,38 +29,45 @@ The project follows a modular pattern to ensure scalability:
 Ensure Ollama is installed and the model is pulled:
 ```bash
 ollama pull gemma3:4b
+```
 
 ## Environment Configuration
 - **Create a .env file in the root directory:**
-- Code Snippet
+```Code Snippet
 MODEL_NAME=gemma3:4b
 OLLAMA_BASE_URL=http://localhost:11434
+```
 
 ## Install Dependencies
-- Bash
+```Bash
 python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
+```
 
 ## Run the Server
-- Bash
+```Bash
 uvicorn app.main:app --reload
+```
 
 ## 📖 API Documentation & Usage
 - **Standard Request (GET)**
+```
 http://127.0.0.1:8000/ask?query={query}
+```
 
 - **Streaming Request (Real-time)**
 - To see the text generation in real-time within your terminal:
 
-- Bash
+```Bash
 curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+to+a+kid](http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+to+a+kid)"
+```
 
 ## Postman Visualization
 - To make the output readable in Postman, go to Scripts > Post-response and paste the relevant template:
 
 - **For /ask (JSON):**
-- JavaScript
+```JavaScript
     var template = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; line-height: 1.8; max-width: 900px; color: #333; background: #f9f9f9; border-radius: 10px;">
             <h1 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">{{metadata.assistant}} Response</h1>
@@ -70,8 +77,9 @@ curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+
         </div>
     `;
     pm.visualizer.set(template, pm.response.json());
+```
 - **For /ask/stream (Text Stream):**
-- JavaScript
+```JavaScript
     var template = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; line-height: 1.8; max-width: 900px; color: #333; background: #f9f9f9; border-radius: 10px;">
             <h1 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">Guro Streaming Feed</h1>
@@ -82,3 +90,4 @@ curl.exe -N "[http://127.0.0.1:8000/ask/stream?query=Explain+Philippine+history+
         </div>
     `;
     pm.visualizer.set(template, { response: pm.response.text() });
+```
