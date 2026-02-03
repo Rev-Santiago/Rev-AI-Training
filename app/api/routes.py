@@ -34,9 +34,9 @@ async def ask_guro(query: str):
     }
 
 @router.get("/ask/stream")
-async def ask_guro_streaming(query: str):
-    # We return a stream instead of a standard dictionary
+async def ask_guro_streaming(query: str, grade: str = "Grade 1"):
+    # Pass the 'grade' from the URL to the engine
     return StreamingResponse(
-        get_guro_response_stream(query, chat_history), 
+        get_guro_response_stream(query, chat_history, grade), 
         media_type="text/plain"
     )
