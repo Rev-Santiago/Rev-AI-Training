@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  guro-backend:
+    build: .
+    container_name: guro-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
