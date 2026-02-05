@@ -4,22 +4,27 @@ This repository serves as a modular training project for the **GURO Backend**, f
 
 ## 🚀 Tech Stack
 - **Framework:** FastAPI (Asynchronous)
-- **AI Orchestration:** LangChain v0.3
+- **AI Orchestration:** LangGraph & LangChain v0.3
 - **Local LLM:** Ollama (Gemma 3:4b)
 - **Resource Monitoring:** psutil
 - **Environment:** Virtual Environments (venv)
+- **Deployment:** Docker & Docker Compose
 
 ## 🏗️ Project Structure
 The project follows a modular pattern to ensure scalability:
 - `app/main.py`: Application entry point and global error handling.
-- `app/api/`: Contains API route definitions and streaming logic.
-- `app/core/`: Houses the AI engine, memory management, and environment configuration.
+- `app/core/ai_engine.py`: Stateful AI engine, LangGraph definition, and persona logic.
+- `app/api/routes.py`: API route definitions, including the new LangGraph and CRUD endpoints.
 
 ## 🌟 Key Features
+* **Stateful LangGraph Orchestration**: Uses a directed graph to manage conversation state via `GuroState`, allowing for modular, multi-actor AI workflows.
+* **Dynamic Persona CRUD**: Grade-level teaching styles are managed through API endpoints, allowing you to Create, Read, Update, or Delete personas without restarting the server.
+* **A/B Architectural Comparison**: Features multiple endpoints to compare legacy linear chains against the new stateful graph-based logic.
 * **Streaming Responses**: Real-time "word-by-word" output using `StreamingResponse` to eliminate perceived latency.
 * **Decoupled Architecture**: Optimized for a Local Server + TV Client setup, offloading heavy AI inference from weak TV hardware.
-* **Resource Guard**: Built-in monitoring to prevent server crashes during high RAM usage.
-* **Sliding Window Memory**: Context-aware teaching that remembers the last 3 conversation turns without bloating memory.
+* **Resource Guard**: Built-in monitoring via `psutil` to prevent server crashes during high RAM usage.
+* **Sliding Window Memory**: Context-aware teaching that remembers only the last 3 conversation turns (6 messages) to protect system memory.
+
 
 
 
@@ -97,6 +102,26 @@ JavaScript
         </div>
     `;
     pm.visualizer.set(template, { response: pm.response.text() });
+```
+
+- **For /ask/graph (Text Stream):**
+JavaScript
+```
+    var jsonData = pm.response.json();
+    var template = `
+        <div style="font-family: 'Segoe UI'; padding: 20px; background: #fdfdfd; border-radius: 10px; border: 1px solid #e0e0e0;">
+            <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db;">🍎 Guro Response ({{engine}})</h2>
+            <p style="font-style: italic; color: #5dade2;">Context: {{gradeDisplay}} active.</p>
+            <div style="white-space: pre-wrap; background: white; padding: 15px; border: 1px solid #eee;">{{content}}</div>
+        </div>
+    `;
+
+    var rawGrade = decodeURIComponent(pm.request.url.query.get("grade") || "Grade 4");
+    pm.visualizer.set(template, {
+        engine: jsonData.engine || "LangGraph Direct",
+        content: jsonData.answer || jsonData.content.answer,
+        gradeDisplay: rawGrade
+    });
 ```
 
 ## 🐳 Docker Deployment (Windows/WSL 2)
