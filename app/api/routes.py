@@ -1,8 +1,14 @@
-from fastapi import APIRouter
-from app.core.ai_engine import get_guro_response, get_guro_response_stream
+from fastapi import APIRouter, HTTPException
+from app.core.ai_engine import get_guro_response, get_guro_response_stream, personas
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 router = APIRouter()
+
+# Schema for adding/updating personas
+class PersonaUpdate(BaseModel):
+    grade_level: str
+    description: str
 
 # 1. Initialize a global list to store the conversation
 # For a TV system, we'll keep this lightweight
@@ -40,3 +46,23 @@ async def ask_guro_streaming(query: str, grade: str = "Grade 1"):
         get_guro_response_stream(query, chat_history, grade), 
         media_type="text/plain"
     )
+
+# CREATE & UPDATE: Add or modify a grade level
+@router.post("/personas")
+async def save_persona(data: PersonaUpdate):
+    # This handles both creating new levels and updating existing ones
+    personas[data.grade_level] = data.description
+    return {"message": f"Successfully saved {data.grade_level}", "current_total": len(personas)}
+
+# READ: List all available grade levels
+@router.get("/personas")
+async def list_personas():
+    return personas
+
+# DELETE: Remove a grade level
+@router.delete("/personas/{grade_level}")
+async def delete_persona(grade_level: str):
+    if grade_level in personas:
+        del personas[grade_level]
+        return {"message": f"Deleted {grade_level}"}
+    raise HTTPException(status_code=404, detail="Grade level not found")
