@@ -1,10 +1,21 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.api.routes import router # Importing your route file
+from contextlib import asynccontextmanager # 1. Import this
+from app.api.routes import router 
+from app.core.database import init_db
 
-app = FastAPI(title="GURO AI Training")
+# 2. Define the lifespan logic
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Run before the app starts
+    init_db() 
+    yield
+    # Shutdown: Run when the app stops (optional cleanup)
+    pass
 
-# Include the routes we just made
+# 3. Pass the lifespan to the FastAPI instance
+app = FastAPI(title="GURO AI Training", lifespan=lifespan)
+
 app.include_router(router)
 
 @app.get("/")
