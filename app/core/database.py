@@ -18,19 +18,26 @@ def get_db():
     finally:
         db.close()
 
+# In app/core/database.py
+
 def init_db():
     """Initializes tables and seeds default personas"""
-    from app.models import Base, Persona
-    Base.metadata.create_all(bind=engine)
+    # 1. CRITICAL: Import the models to populate Base.metadata
+    from app.models import Base, Persona, ChatMessage 
     
-    # Seeding logic for your Grade 1-7 and TVET personas
+    # 2. Now metadata knows about 'personas' and 'chat_history' tables
+    Base.metadata.create_all(bind=engine) 
+    
     db = SessionLocal()
-    if not db.query(Persona).first():
-        defaults = {
-            "Grade 7": "Mentor vibe. Use detailed facts...",
-            "TVET": "Professional yet easy to understand for career shifter..."
-        }
-        for level, desc in defaults.items():
-            db.add(Persona(grade_level=level, description=desc))
-        db.commit()
-    db.close()
+    try:
+        # 3. Check if seeding is needed
+        if not db.query(Persona).first():
+            defaults = {
+                "Grade 7": "Mentor vibe. Use detailed facts, proper terminology, and social analogies.",
+                "TVET": "Professional yet easy to understand for career shifter, or beginner, and professional, assuming this is a technical skill based vocational education in the Philippines"
+            }
+            for level, desc in defaults.items():
+                db.add(Persona(grade_level=level, description=desc))
+            db.commit()
+    finally:
+        db.close()
