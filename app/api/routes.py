@@ -39,7 +39,7 @@ async def ask_guro(query: str):
     }
 
 @router.get("/ask/stream")
-async def ask_guro_streaming(query: str, grade: str = "Grade 1"):
+async def ask_guro_streaming(query: str, grade: str = "Grade 7"):
     # Pass the 'grade' from the URL to the legacy streaming engine
     return StreamingResponse(
         get_guro_response_stream(query, chat_history, grade), 
@@ -66,3 +66,34 @@ async def delete_persona(grade_level: str):
     raise HTTPException(status_code=404, detail="Grade level not found")
 
 # NEW: LangGraph exploration endpoint
+@router.get("/ask/graph")
+async def ask_guro_graph(query: str, grade: str = "Grade 7"):
+    """
+    Experimental route using LangGraph to process the request.
+    """
+    # Explicitly typing this as GuroState removes the red line in the IDE
+    initial_state: GuroState = {
+        "question": query,
+        "grade": grade,
+        "history": chat_history,
+        "response": ""
+    }
+    
+    # Invoke the graph
+    result = await guro_graph.ainvoke(initial_state)
+    
+    # Extract the response from the updated state
+    answer = result.get("response", "Pasensya na, I couldn't generate an answer.")
+    
+    # Update the global history for the next turn
+    chat_history.append(("human", query))
+    chat_history.append(("ai", answer))
+    
+    if len(chat_history) > 6:
+        del chat_history[:2]
+        
+    return {
+        "status": "success",
+        "engine": "LangGraph Direct",
+        "answer": answer
+    }
