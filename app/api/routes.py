@@ -62,10 +62,8 @@ async def save_persona(data: PersonaUpdate):
 # READ: List all available grade levels
 @router.get("/personas")
 async def list_personas(db: Session = Depends(get_db)):
-    # This query forces the engine to connect and create the .db file
+    # This query triggers the database connection and file creation
     db_personas = db.query(Persona).all()
-    
-    # If the DB is working, this will return the seeded Grade 7 and TVET entries
     return {p.grade_level: p.description for p in db_personas}
 
 # DELETE: Remove a grade level
@@ -79,32 +77,28 @@ async def delete_persona(grade_level: str):
 
 @router.get("/ask/graph")
 async def ask_guro_graph(query: str, grade: str = "Grade 7", db: Session = Depends(get_db)):
-    """
-    Experimental route using LangGraph with Database Persistence.
-    """
-    # 1. Fetch History from DB (Replaces global chat_history list)
-    # We retrieve the last 6 messages to maintain the sliding window context
+    # 1. Fetch persistent history from DB (Last 6 messages for sliding window)
     db_history = db.query(ChatMessage).order_by(ChatMessage.timestamp.desc()).limit(6).all()
-    # Convert DB models back to the list of tuples the Graph expects
     formatted_history = [(msg.role, msg.content) for msg in reversed(db_history)]
 
-    # 2. Prepare the State
+    # 2. Initialize state with the user-provided grade (e.g., "TVET")
     initial_state: GuroState = {
         "question": query,
-        "grade": grade, # This now correctly passes "TVET" if requested
+        "grade": grade,
         "history": formatted_history,
         "response": ""
     }
     
-    # 3. Invoke the graph
+    # 3. Invoke the LangGraph workflow
     result = await guro_graph.ainvoke(initial_state)
     answer = result.get("response", "Pasensya na, I couldn't generate an answer.")
     
-    # 4. Save the New Turn to the Database (Persistent Storage)
-    new_human_msg = ChatMessage(role="human", content=query, session_id="default_session")
-    new_ai_msg = ChatMessage(role="ai", content=answer, session_id="default_session")
-    db.add_all([new_human_msg, new_ai_msg])
-    db.commit() # Saves to /app/data/guro.db inside the Docker volume
+    # 4. Persist the new turn to the database
+    db.add_all([
+        ChatMessage(role="human", content=query),
+        ChatMessage(role="ai", content=answer)
+    ])
+    db.commit()
         
     return {
         "status": "success",
