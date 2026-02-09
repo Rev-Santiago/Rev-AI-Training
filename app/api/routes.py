@@ -39,7 +39,7 @@ async def ask_guro(query: str):
     }
 
 @router.get("/ask/stream")
-async def ask_guro_streaming(query: str, grade: str = "Grade 1"):
+async def ask_guro_streaming(query: str, grade: str = "Grade 7"):
     # Pass the 'grade' from the URL to the legacy streaming engine
     return StreamingResponse(
         get_guro_response_stream(query, chat_history, grade), 
@@ -67,7 +67,7 @@ async def delete_persona(grade_level: str):
 
 # NEW: LangGraph exploration endpoint
 @router.get("/ask/graph")
-async def ask_guro_graph(query: str, grade: str = "Grade 4"):
+async def ask_guro_graph(query: str, grade: str = "Grade 7"):
     """
     Experimental route using LangGraph to process the request.
     """
