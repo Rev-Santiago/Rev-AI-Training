@@ -1,4 +1,4 @@
-# Guro AI Training Backend 🍎
+# Guro AI Training Backend 
 
 This repository serves as a modular training project for the **GURO Backend**, focusing on the integration of local LLMs with **FastAPI**. It demonstrates core competencies in asynchronous Python, AI orchestration with **LangChain**, and clean architectural patterns optimized for offline TV-based learning systems.
 
