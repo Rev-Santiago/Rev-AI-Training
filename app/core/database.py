@@ -13,7 +13,13 @@ POSTGRES_URL = os.getenv("DATABASE_URL") # For production use
 def get_engine():
     if DB_TYPE == "postgresql":
         # Provide a fallback or raise an error if the URL is missing
-        url = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/dbname")
+        url = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/dbname")
+        return create_engine(url)
+    
+    # NEW: Support for MySQL
+    elif DB_TYPE == "mysql":
+        # Provide a fallback or raise an error if the URL is missing
+        url = os.getenv("DATABASE_URL", "mysql+pymysql://user:pass@localhost:3306/dbname")
         return create_engine(url)
     
     # Default to SQLite for local training
