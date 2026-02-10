@@ -50,28 +50,53 @@ Query the AI using a specific session ID to maintain history.
 ## 📊 Architecture Flow
 ```mermaid
 graph TD
-    User[User] -->|POST /rag/ingest| API_Ingest{RAG API}
-    User -->|GET /ask/graph| API_Query{Query API}
-    
-    subgraph "Guro AI Container"
-        direction TB
-        API_Ingest -->|Chunk & Embed| Embed[Ollama: nomic-embed-text]
-        Embed -->|Save Vectors| FAISS[(FAISS Vector Store)]
+    %% User Interactors
+    User[User / Postman] -->|HTTP Requests| API_Gateway{FastAPI Gateway}
+
+    %% API Layer (Routers)
+    subgraph "API Layer (app/api/routers)"
+        API_Gateway -->|POST /rag/ingest| RAG_Route[rag_routes.py]
+        API_Gateway -->|GET /ask/graph| Query_Route[query_routes.py]
+        API_Gateway -->|CRUD /personas| Persona_Route[persona_routes.py]
+    end
+
+    %% Core Logic & Orchestration
+    subgraph "Orchestration Layer (app/core)"
+        Query_Route -->|Initialize State| Graph[LangGraph Workflow]
         
-        API_Query -->|Init State| Graph[LangGraph Workflow]
-        
-        subgraph "LangGraph Nodes"
-            Graph --> Node_Ret[retrieve_context]
-            Node_Ret -->|Search| FAISS
-            FAISS -->|Return Context| Node_Ret
+        subgraph "LangGraph Workflow (ai_engine.py)"
+            direction TB
+            Graph --> Node_Ret[retrieve_context_node]
+            Node_Ret -->|Similarity Search| FAISS
+            FAISS -->|Relevant Chunks| Node_Ret
             
             Node_Ret --> Node_Gen[call_guro_node]
-            Node_Gen -->|Prompt + Context| LLM[Ollama: gemma2]
+            Node_Gen -->|Prompt + Context| LLM[Ollama: gemma3:4b]
         end
-        
-        Node_Gen -->|Save History| DB[(SQLite Factory)]
+
+        RAG_Route -->|Text Extraction| PyPDF[pypdf Parser]
+        PyPDF -->|Chunks| RAG_Eng[rag_engine.py]
+        RAG_Eng -->|Embeddings| Nom_Embed[nomic-embed-text]
+        Nom_Embed -->|Save Vectors| FAISS[(FAISS Vector Store)]
     end
-    
+
+    %% Persistence Layer
+    subgraph "Data Persistence Layer"
+        direction LR
+        Node_Gen -->|Save History| DB_Factory{Database Factory}
+        Persona_Route -->|Manage Personas| DB_Factory
+        
+        DB_Factory -->|SQLite Dialect| SQLite[(guro.db)]
+        DB_Factory -->|Postgres Dialect| Postgres[(External PG DB)]
+        DB_Factory -->|MySQL Dialect| MySQL[(External MySQL DB)]
+    end
+
+    %% Docker Volume Mapping
+    subgraph "Docker Volume (Persistence)"
+        SQLite
+        FAISS
+    end
+
     LLM -->|Final Response| User
 ```
 
