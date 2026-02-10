@@ -1,9 +1,13 @@
 from langchain_ollama import OllamaLLM 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from app.core.config import MODEL_NAME, OLLAMA_BASE_URL
-from typing import Annotated, TypedDict, List, Union
+from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
+from sqlalchemy.orm import Session
+from app.models import Persona
+from app.core.database import SessionLocal  # Import to create temporary sessions
 import psutil
+from app.core.rag_engine import get_vector_store
 
 # 1. Configuration & LLM Setup
 llm = OllamaLLM(
@@ -13,19 +17,20 @@ llm = OllamaLLM(
     temperature=0.75  
 )
 
-# 2. CRUD-able Personas
-personas = {
-    "Grade 1": "Persona for 6-year-olds: Use very simple words, many emojis, and short sentences. Analogies: Toys and snacks.",
-    "Grade 2": "Persona for 7-year-olds: Simple words but introduce basic 'How' and 'Why'. Analogies: Animals and nature.",
-    "Grade 3": "Persona for 8-year-olds: Conversational Taglish. Focus on storytelling and curiosity. Analogies: Superheroes and games.",
-    "Grade 4": "Persona for 9-year-olds: Balanced English-Tagalog. Use analogies about school and sports.",
-    "Grade 5": "Persona for 10-year-olds: Introduce more structured facts and 'Science/History' terms. Analogies: Hobbies and inventions.",
-    "Grade 6": "Persona for 11-year-olds: Prepare them for high school. Use critical thinking questions. Analogies: Technology and teamwork.",
-    "Grade 7": "Persona for 12-13 year olds: Mentor vibe. Use detailed facts, proper terminology, and social analogies."
-}
-
-def get_persona_for_grade(grade: str):
-    return personas.get(grade, personas["Grade 4"])
+# 2. Database-Driven Persona Logic
+def get_persona_from_db(grade: str):
+    """Fetches persona description from SQLite with a fallback."""
+    db = SessionLocal()
+    try:
+        result = db.query(Persona).filter(Persona.grade_level == grade).first()
+        if result:
+            return result.description
+        
+        # Fallback to Grade 7 if the specific grade isn't found
+        fallback = db.query(Persona).filter(Persona.grade_level == "Grade 7").first()
+        return fallback.description if fallback else "You are a helpful Filipino teacher."
+    finally:
+        db.close()
 
 # 3. System Health Check
 def check_system_resources():
@@ -40,48 +45,75 @@ class GuroState(TypedDict):
     grade: str
     response: str
     history: List
+    context: str
 
+# 2. Add Retrieval Node
+async def retrieve_context_node(state: GuroState):
+    """Searches FAISS for relevant information based on the question."""
+    vectorstore = get_vector_store()
+    if not vectorstore:
+        return {"context": "No local documents found."}
+    
+    # Retrieve top 2 most relevant chunks
+    docs = vectorstore.similarity_search(state['question'], k=2)
+    context_text = "\n\n".join([doc.page_content for doc in docs])
+    return {"context": context_text}
+
+# 3. Update the LLM Node to use context
 async def call_guro_node(state: GuroState):
-    """The main AI node in the graph."""
-    persona = get_persona_for_grade(state['grade'])
+    persona = get_persona_from_db(state['grade']) 
+    
+    # 1. Get context and escape curly braces to prevent prompt injection errors
+    raw_context = state.get('context', 'None available.')
+    safe_context = raw_context.replace("{", "{{").replace("}", "}}")
+    
+    # 2. Incorporate SAFE context into the system prompt
+    system_message = (
+        f"You are Guro, a Filipino teacher. {persona}\n\n"
+        f"Context from local files:\n{safe_context}"
+    )
+    
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are Guro, a Filipino teacher. {persona}"),
+        ("system", system_message),
         MessagesPlaceholder(variable_name="history"),
         ("human", "{question}")
     ])
+    
     chain = prompt | llm
     res = await chain.ainvoke({"question": state['question'], "history": state['history']})
     return {"response": res}
 
-# Building and Compiling the Graph
+# 4. Wire the Node into the Workflow
 workflow = StateGraph(GuroState)
+workflow.add_node("retrieve", retrieve_context_node) # New node
 workflow.add_node("guro", call_guro_node)
-workflow.set_entry_point("guro")
+workflow.set_entry_point("retrieve") # Start with retrieval
+workflow.add_edge("retrieve", "guro") # Then go to AI generation
 workflow.add_edge("guro", END)
 
-# This MUST be defined before any functions that call it
 guro_graph = workflow.compile()
 
 # 5. Response Functions
-async def get_guro_response(user_input: str, chat_history: list):
+async def get_guro_response(user_input: str, chat_history: list, grade: str = "Grade 7"):
     """Standard JSON response powered by LangGraph"""
     state: GuroState = {
         "question": user_input,
-        "grade": "Grade 4", 
+        "grade": grade, 
         "history": chat_history,
+        "context": "",
         "response": ""
     }
     result = await guro_graph.ainvoke(state)
     return result["response"]
 
-async def get_guro_response_stream(user_input: str, chat_history: list, grade: str = "Grade 1"):
-    """Legacy Streaming for A/B comparison"""
+async def get_guro_response_stream(user_input: str, chat_history: list, grade: str = "Grade 7"):
+    """Streaming response using DB-persisted personas"""
     is_healthy, _ = check_system_resources()
     if not is_healthy:
         yield "Pasensya na, the server is busy."
         return
 
-    persona_instruction = get_persona_for_grade(grade)
+    persona_instruction = get_persona_from_db(grade)
     system_prompt = f"You are Guro, a legendary Filipino teacher. {persona_instruction}"
 
     dynamic_prompt = ChatPromptTemplate.from_messages([
