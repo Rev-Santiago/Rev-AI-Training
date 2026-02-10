@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models import Persona
 from app.core.database import SessionLocal  # Import to create temporary sessions
 import psutil
+from app.core.rag_engine import get_vector_store
 
 # 1. Configuration & LLM Setup
 llm = OllamaLLM(
@@ -44,14 +45,32 @@ class GuroState(TypedDict):
     grade: str
     response: str
     history: List
+    context: str
 
+# 2. Add Retrieval Node
+async def retrieve_context_node(state: GuroState):
+    """Searches FAISS for relevant information based on the question."""
+    vectorstore = get_vector_store()
+    if not vectorstore:
+        return {"context": "No local documents found."}
+    
+    # Retrieve top 2 most relevant chunks
+    docs = vectorstore.similarity_search(state['question'], k=2)
+    context_text = "\n\n".join([doc.page_content for doc in docs])
+    return {"context": context_text}
+
+# 3. Update the LLM Node to use context
 async def call_guro_node(state: GuroState):
-    """The main AI node in the graph using DB-persisted personas."""
-    # Logic now pulls directly from the database
     persona = get_persona_from_db(state['grade']) 
     
+    # Incorporate retrieved context into the system prompt
+    system_message = (
+        f"You are Guro, a Filipino teacher. {persona}\n\n"
+        f"Context from local files:\n{state.get('context', 'None available.')}"
+    )
+    
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"You are Guro, a Filipino teacher. {persona}"),
+        ("system", system_message),
         MessagesPlaceholder(variable_name="history"),
         ("human", "{question}")
     ])
@@ -60,11 +79,14 @@ async def call_guro_node(state: GuroState):
     res = await chain.ainvoke({"question": state['question'], "history": state['history']})
     return {"response": res}
 
-# Building and Compiling the Graph
+# 4. Wire the Node into the Workflow
 workflow = StateGraph(GuroState)
+workflow.add_node("retrieve", retrieve_context_node) # New node
 workflow.add_node("guro", call_guro_node)
-workflow.set_entry_point("guro")
+workflow.set_entry_point("retrieve") # Start with retrieval
+workflow.add_edge("retrieve", "guro") # Then go to AI generation
 workflow.add_edge("guro", END)
+
 guro_graph = workflow.compile()
 
 # 5. Response Functions
@@ -74,6 +96,7 @@ async def get_guro_response(user_input: str, chat_history: list, grade: str = "G
         "question": user_input,
         "grade": grade, 
         "history": chat_history,
+        "context": "",
         "response": ""
     }
     result = await guro_graph.ainvoke(state)

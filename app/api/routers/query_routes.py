@@ -52,6 +52,7 @@ async def ask_guro_graph(query: str, session_id: str, grade: str = "Grade 7", db
         "question": query,
         "grade": grade,
         "history": formatted_history,
+        "context": "",
         "response": ""
     }
     
