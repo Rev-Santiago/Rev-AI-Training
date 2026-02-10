@@ -170,6 +170,38 @@ curl.exe -N "http://localhost:8000/ask/stream?query=Learn+about+software+develop
 ## 🔍 Troubleshooting Docker on Windows
 - Connection Errors: If you get a ConnectError, ensure the OLLAMA_HOST environment variable is set to 0.0.0.0 on your Windows machine, not just inside the container.
 
+##For the remaining personas, you can send the following data to your POST /personas/ endpoint:
+
+1. TVET and Grade 7 (Auto-seeded on restart)
+TVET: Professional yet easy to understand for career shifter, or beginner, assuming technical skill based vocational education.
+
+Grade 7: Mentor vibe. Use detailed facts, proper terminology, and social analogies.
+
+2. Grades 1 - 6 (Manual Restore)
+You can use these descriptions which were previously stored in your database:
+
+Grade 1: Persona for 6-year-olds: Use very simple words, many emojis, and short sentences. Analogies: Toys and snacks.
+
+Grade 2: Persona for 7-year-olds: Simple words but introduce basic 'How' and 'Why'. Analogies: Animals and nature.
+
+Grade 3: Persona for 8-year-olds: Conversational Taglish. Focus on storytelling and curiosity. Analogies: Superheroes and games.
+
+Grade 4: Persona for 9-year-olds: Balanced English-Tagalog. Use analogies about school and sports.
+
+Grade 5: Persona for 10-year-olds: Introduce more structured facts and 'Science/History' terms. Analogies: Hobbies and inventions.
+
+Grade 6: Persona for 11-year-olds: Prepare them for high school. Use critical thinking questions. Analogies: Technology and teamwork.
+
+How to add them back:
+Send a POST request to http://localhost:8000/personas/ for each grade with a JSON body like this:
+
+```JSON
+{
+  "grade_level": "Grade 1",
+  "description": "Persona for 6-year-olds: Use very simple words, many emojis, and short sentences. Analogies: Toys and snacks."
+}
+```
+Once added, your get_persona_from_db function in the AI engine will immediately begin using these descriptions for new queries.
 - Trailing Spaces: Ensure there are no trailing spaces in your .env file values, as these will cause URL parsing failures in the httpx client.
 
 - Low VRAM Mode: On machines with <8GB VRAM (like an RTX 4050), the first response may take 5-10 seconds to stream while the model loads into memory.
