@@ -63,10 +63,14 @@ async def retrieve_context_node(state: GuroState):
 async def call_guro_node(state: GuroState):
     persona = get_persona_from_db(state['grade']) 
     
-    # Incorporate retrieved context into the system prompt
+    # 1. Get context and escape curly braces to prevent prompt injection errors
+    raw_context = state.get('context', 'None available.')
+    safe_context = raw_context.replace("{", "{{").replace("}", "}}")
+    
+    # 2. Incorporate SAFE context into the system prompt
     system_message = (
         f"You are Guro, a Filipino teacher. {persona}\n\n"
-        f"Context from local files:\n{state.get('context', 'None available.')}"
+        f"Context from local files:\n{safe_context}"
     )
     
     prompt = ChatPromptTemplate.from_messages([

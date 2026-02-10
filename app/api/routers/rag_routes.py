@@ -43,14 +43,3 @@ async def ingest_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/query")
-async def query_vector_store(prompt: str):
-    """
-    Endpoint for RAG queries.
-    Future logic: Similarity search to retrieve context for the LLM.
-    """
-    return {
-        "query": prompt,
-        "results": [],
-        "context": "Vector store retrieval logic pending."
-    }
