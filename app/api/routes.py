@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
-from app.core.ai_engine import get_guro_response, get_guro_response_stream, personas, guro_graph, GuroState
+from app.core.ai_engine import get_guro_response, get_guro_response_stream, guro_graph, GuroState
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -75,22 +75,21 @@ async def save_persona(data: PersonaUpdate, db: Session = Depends(get_db)):
     return {"message": f"Successfully saved {data.grade_level}"}
 
 # DELETE: Remove persona from database
+
 @router.delete("/personas/{grade_level}")
 async def delete_persona(grade_level: str, db: Session = Depends(get_db)):
+    # Query the database for the record
     persona_to_delete = db.query(Persona).filter(Persona.grade_level == grade_level).first()
     
     if not persona_to_delete:
         raise HTTPException(status_code=404, detail="Grade level not found in database")
     
+    # Perform the deletion
     db.delete(persona_to_delete)
     db.commit()
     
-    # Optional: Keep legacy dictionary in sync
-    if grade_level in personas:
-        del personas[grade_level]
-        
+    # Legacy dictionary sync is no longer needed as the dictionary was removed
     return {"message": f"Deleted {grade_level} from database"}
-
 @router.get("/ask/graph")
 async def ask_guro_graph(query: str, grade: str = "Grade 7", db: Session = Depends(get_db)):
     # 1. Fetch persistent history from DB (Last 6 messages)
