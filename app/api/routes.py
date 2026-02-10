@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from app.core.ai_engine import get_guro_response, get_guro_response_stream, personas, guro_graph, GuroState
 from fastapi.responses import StreamingResponse
@@ -58,7 +59,7 @@ async def list_personas(db: Session = Depends(get_db)):
 @router.post("/personas")
 async def save_persona(data: PersonaUpdate, db: Session = Depends(get_db)):
     # Explicitly type hint ': Persona' so the IDE sees the 'description' attribute
-    existing_persona: Persona = db.query(Persona).filter(Persona.grade_level == data.grade_level).first()
+    existing_persona: Optional[Persona] = db.query(Persona).filter(Persona.grade_level == data.grade_level).first()
     
     if existing_persona:
         # The redline should disappear now

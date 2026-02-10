@@ -17,20 +17,19 @@ def get_db():
 
 def init_db():
     """Initializes tables and seeds default personas"""
-    # CRITICAL: Local import registers your tables with SQLAlchemy
+    # CRITICAL: This import registers the new Mapped classes
     import app.models 
     from app.models import Base, Persona
     
-    # Now this command builds the 'personas' and 'chat_history' tables
+    # Builds the updated 'personas' and 'chat_history' tables
     Base.metadata.create_all(bind=engine) 
     
     db = SessionLocal()
     try:
-        # Check if we need to seed the TVET and Grade 7 personas
         if not db.query(Persona).first():
             defaults = {
                 "Grade 7": "Mentor vibe. Use detailed facts, proper terminology, and social analogies.",
-                "TVET": "Professional yet easy to understand for career shifter, or beginner, assuming technical skill based vocational education."
+                "TVET": "Professional yet easy to understand for career shifter..."
             }
             for level, desc in defaults.items():
                 db.add(Persona(grade_level=level, description=desc))

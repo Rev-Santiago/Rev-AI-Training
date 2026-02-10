@@ -1,19 +1,20 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import String, Text, DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from datetime import datetime
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 class Persona(Base):
     __tablename__ = "personas"
-    id = Column(Integer, primary_key=True, index=True)
-    grade_level = Column(String, unique=True, index=True)
-    description = Column(Text)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    grade_level: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text)
 
 class ChatMessage(Base):
     __tablename__ = "chat_history"
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(String, index=True) # To group messages
-    role = Column(String) # 'human' or 'ai'
-    content = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    session_id: Mapped[str] = mapped_column(String(100), index=True, nullable=True)
+    role: Mapped[str] = mapped_column(String(20)) 
+    content: Mapped[str] = mapped_column(Text)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
