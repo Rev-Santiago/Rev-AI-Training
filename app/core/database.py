@@ -1,11 +1,25 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import os
+from dotenv import load_dotenv
 
-# Use an absolute-style path to ensure it hits the Docker volume mount
-DATABASE_URL = "sqlite:////app/data/guro.db"
+load_dotenv()
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Factory logic for Database Selection
+DB_TYPE = os.getenv("DB_TYPE", "sqlite")
+SQLITE_URL = "sqlite:////app/data/guro.db"
+POSTGRES_URL = os.getenv("DATABASE_URL") # For production use
+
+def get_engine():
+    if DB_TYPE == "postgresql":
+        # Provide a fallback or raise an error if the URL is missing
+        url = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/dbname")
+        return create_engine(url)
+    
+    # Default to SQLite for local training
+    return create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
+
+engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

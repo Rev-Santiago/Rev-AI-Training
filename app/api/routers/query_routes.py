@@ -39,12 +39,15 @@ async def ask_guro_streaming(query: str, grade: str = "Grade 7"):
     return StreamingResponse(get_guro_response_stream(query, chat_history, grade), media_type="text/plain")
 
 @router.get("/graph")
-async def ask_guro_graph(query: str, grade: str = "Grade 7", db: Session = Depends(get_db)):
-    # 1. Fetch persistent history from DB (Last 6 messages)
-    db_history = db.query(ChatMessage).order_by(ChatMessage.timestamp.desc()).limit(6).all()
+async def ask_guro_graph(query: str, session_id: str, grade: str = "Grade 7", db: Session = Depends(get_db)):
+    # Filter history strictly by the provided session_id (Prompt ID)
+    db_history = db.query(ChatMessage)\
+        .filter(ChatMessage.session_id == session_id)\
+        .order_by(ChatMessage.timestamp.desc())\
+        .limit(6).all()
+        
     formatted_history = [(msg.role, msg.content) for msg in reversed(db_history)]
 
-    # 2. Initialize state with the user-provided grade
     initial_state: GuroState = {
         "question": query,
         "grade": grade,
@@ -52,19 +55,18 @@ async def ask_guro_graph(query: str, grade: str = "Grade 7", db: Session = Depen
         "response": ""
     }
     
-    # 3. Invoke the LangGraph workflow
     result = await guro_graph.ainvoke(initial_state)
     answer = result.get("response", "Pasensya na, I couldn't generate an answer.")
     
-    # 4. Persist the new turn to the database
+    # Save with the session_id to maintain separate conversation tracks
     db.add_all([
-        ChatMessage(role="human", content=query),
-        ChatMessage(role="ai", content=answer)
+        ChatMessage(role="human", content=query, session_id=session_id),
+        ChatMessage(role="ai", content=answer, session_id=session_id)
     ])
     db.commit()
         
     return {
         "status": "success",
-        "engine": "LangGraph with SQLite Persistence",
+        "session_id": session_id,
         "answer": answer
     }

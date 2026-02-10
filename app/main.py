@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager # 1. Import this
-from app.api.routers import persona_routes, query_routes
+from contextlib import asynccontextmanager
+from app.api.routers import persona_routes, query_routes, rag_routes
 from app.core.database import init_db
 
 # 2. Define the lifespan logic
@@ -18,6 +18,7 @@ app = FastAPI(title="GURO AI", lifespan=lifespan)
 
 app.include_router(persona_routes.router)
 app.include_router(query_routes.router)
+app.include_router(rag_routes.router)
 
 @app.get("/")
 def root():
