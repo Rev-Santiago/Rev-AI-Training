@@ -170,7 +170,7 @@ curl.exe -N "http://localhost:8000/ask/stream?query=Learn+about+software+develop
 ## 🔍 Troubleshooting Docker on Windows
 - Connection Errors: If you get a ConnectError, ensure the OLLAMA_HOST environment variable is set to 0.0.0.0 on your Windows machine, not just inside the container.
 
-##For the remaining personas, you can send the following data to your POST /personas/ endpoint:
+## For the remaining personas, you can send the following data to your POST /personas/ endpoint:
 
 1. TVET and Grade 7 (Auto-seeded on restart)
 TVET: Professional yet easy to understand for career shifter, or beginner, assuming technical skill based vocational education.
